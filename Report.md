@@ -1,143 +1,157 @@
-# 50.007 Machine Learning Project Report
+# English Phrase Chunking Project
 
-## English Phrase Chunking using HMM and Enhanced Models
+This project implements sequence labeling models for English phrase chunking, including a baseline system, Viterbi algorithm, k-best Viterbi, and an enhanced Structured Perceptron. The goal is to identify and label multi-word phrases (e.g., noun phrases, verb phrases) in English text, progressing from simple probabilistic models to more sophisticated sequence-aware approaches.
 
-### 1. Introduction
+## Requirements
 
-This report presents our implementation and analysis of sequence labeling models for English phrase chunking. We developed several models, from a baseline system to advanced implementations, focusing on both accuracy and computational efficiency.
+- Python 3.10 or higher
+- No external ML libraries required (only standard Python libraries are used)
 
-### 2. Part 1: Baseline System
-
-#### 2.1 Implementation Approach
-
-- Implemented Maximum Likelihood Estimation (MLE) for emission parameters
-- Applied smoothing by replacing rare words (frequency < 3) with specialized #UNK# tokens
-- Built a simple prediction system using only emission probabilities
-
-#### 2.2 Results on Development Set
+## Project Structure
 
 ```
-#Phrases in gold data: 13179
-#Phrases in prediction: 13071
-
-Precision: 0.6234
-Recall: 0.6157
-F-score: 0.6195
+.
+├── chunker.py           # Main script for all parts
+├── EN/                  # Data directory
+│   ├── train           # Training data
+│   ├── dev.in          # Development input
+│   ├── dev.out         # Development gold standard
+│   └── test.in         # Test input (provided later)
+├── Report.md           # Project report
+└── README.md           # This file
 ```
 
-### 3. Part 2: Viterbi Algorithm
+## Running the Code
 
-#### 3.1 Implementation Approach
+### Part 1: Baseline System
 
-- Implemented MLE for transition parameters, including START and STOP states
-- Developed Viterbi algorithm using log probabilities for numerical stability
-- Applied smoothing techniques from Part 1
-
-#### 3.2 Algorithm Description
-
-The Viterbi implementation follows these key steps:
-
-1. Initialization with START state probabilities
-2. Forward pass computing optimal subpaths
-3. Backward pass for path reconstruction
-4. Special handling of START/STOP transitions
-
-#### 3.3 Results on Development Set
-
-```
-#Phrases in gold data: 13179
-#Phrases in prediction: 13071
-
-Precision: 0.8527
-Recall: 0.8457
-F-score: 0.8492
+```bash
+python chunker.py --part 1
 ```
 
-### 4. Part 3: 4th-Best Sequence
+This will:
+- Train the baseline model using emission probabilities
+- Generate predictions in `EN/dev.p1.out`
 
-#### 4.1 Algorithm Description
+### Part 2: Viterbi Algorithm
 
-Our k-best Viterbi implementation maintains multiple candidates at each position:
-
-1. **Extension of Viterbi Tables:**
-
-   - Instead of storing single best score/backpointer, we maintain k-best lists
-   - At each position t and state y, store list of (score, backpointer, path_index)
-   - Path_index tracks which previous k-best path this extends
-
-2. **Forward Pass Modifications:**
-
-   - For each position and state, collect all possible extensions from previous states
-   - Sort extensions by score and keep top-k
-   - Store backpointers to both previous state and which of its k-best paths
-
-3. **Backward Pass Adaptations:**
-
-   - Start with kth-best final state
-   - Follow backpointers considering both state and path index
-   - Reconstruct the complete 4th-best sequence
-
-4. **Numerical Stability:**
-   - Use log probabilities throughout
-   - Handle underflow in probability calculations
-   - Maintain sorted k-best lists efficiently
-
-#### 4.2 Results on Development Set
-
-```
-#Phrases in gold data: 13179
-#Phrases in prediction: 12862
-
-Precision: 0.7125
-Recall: 0.7034
-F-score: 0.7079
+```bash
+python chunker.py --part 2
 ```
 
-### 5. Part 4: Enhanced System
+This will:
+- Train the HMM model with Viterbi decoding
+- Generate predictions in `EN/dev.p2.out`
 
-#### 5.1 Model Selection and Justification
+### Part 3: 4th-Best Sequence
 
-We implemented an Enhanced Structured Perceptron with the following improvements:
-
-1. **Rich Feature Set:**
-
-   - Word shape features (capitalization, digits, etc.)
-   - Prefix/suffix features
-   - Context window features
-   - Position-specific features
-
-2. **Optimization Techniques:**
-
-   - Adaptive beam search
-   - Feature caching
-   - Early stopping
-   - Learning rate decay
-
-3. **Advantages over Base HMM:**
-   - More flexible feature engineering
-   - Better handling of unknown words
-   - Discriminative training
-   - Adaptive optimization
-
-#### 5.2 Results on Development Set
-
-```
-#Phrases in gold data: 13179
-#Phrases in prediction: 12862
-
-Precision: 0.8325
-Recall: 0.8125
-F-score: 0.8224
+```bash
+python chunker.py --part 3
 ```
 
-### 6. Conclusion
+This will:
+- Run k-best Viterbi algorithm (k=3 for 4th best)
+- Generate predictions in `EN/dev.p3.out`
 
-Our implementations demonstrate the progression from simple baseline to sophisticated sequence labeling models. The Enhanced Structured Perceptron (Part 4) achieves competitive performance while maintaining computational efficiency through various optimizations.
+### Part 4: Enhanced System
 
-Key findings:
+```bash
+python chunker.py --part 4
+```
 
-1. Basic HMM with Viterbi provides strong baseline (F: 0.8492)
-2. 4th-best sequence shows lower but reasonable performance (F: 0.7079)
-3. Enhanced Perceptron achieves good balance of accuracy and efficiency (F: 0.8224)
+This will:
+- Train the Enhanced Structured Perceptron
+- Generate predictions in `EN/dev.p4.out`
 
-The final system is ready for deployment on the test set, with code optimized for both accuracy and speed.
+For test set predictions (when available):
+
+```bash
+python chunker.py --part 4 --test
+```
+
+This will generate predictions in `EN/test.p4.out`
+
+## Implementation Details
+
+### Part 1: Baseline System
+
+#### Approach
+The baseline system uses Maximum Likelihood Estimation (MLE) to estimate emission probabilities from the training data. For each word, it predicts the tag with the highest emission probability. To handle rare or unseen words (frequency < 3), we implement smoothing by replacing them with specialized `#UNK#` tokens (e.g., `#UNK-CAPS#` for all-caps words). This improves generalization to unseen data.
+
+#### Limitations
+The model assumes tag independence, predicting each word’s tag without considering its neighbors. This oversimplification ignores natural language dependencies (e.g., a determiner often precedes a noun), limiting its accuracy.
+
+### Part 2: Viterbi Algorithm
+
+#### Approach
+The Viterbi algorithm enhances the baseline by incorporating a Hidden Markov Model (HMM) with both emission and transition probabilities. It uses dynamic programming to find the most probable tag sequence:
+
+1. **Initialization**: Compute probabilities for the first word using START transitions and emissions.
+2. **Recursion**: For each subsequent word, calculate the maximum probability of each tag given previous tags.
+3. **Termination**: Select the best tag transitioning to STOP.
+4. **Backtracking**: Reconstruct the sequence using stored backpointers.
+
+Log probabilities are used to prevent numerical underflow, ensuring stability for long sequences.
+
+#### Advantages
+By modeling tag dependencies, this approach produces more coherent sequences compared to the baseline.
+
+### Part 3: K-Best Viterbi
+
+#### Approach
+The k-best Viterbi algorithm extends the standard Viterbi to track the top-k sequences (here, k=3 to extract the 4th-best). It uses a priority queue to manage candidates efficiently:
+
+1. **Initialization**: Track multiple paths for the first word.
+2. **Recursion**: Extend all k-best paths from previous states, pruning to k at each step.
+3. **Termination**: Select the kth-best sequence at STOP.
+
+#### Purpose
+The 4th-best sequence provides an alternative hypothesis, useful for applications needing multiple outputs.
+
+### Part 4: Enhanced System
+
+#### Approach
+The enhanced system implements a Structured Perceptron, a discriminative model with a rich feature set:
+- Word shape (e.g., capitalization, digits)
+- Prefix/suffix patterns
+- Context window (previous/next words)
+- Position features (e.g., sentence start/end)
+
+Optimizations include:
+- **Beam Search**: Limits decoding candidates (beam size=5) for efficiency.
+- **Feature Caching**: Stores computed features to reduce redundancy.
+- **Early Stopping**: Halts training when performance plateaus.
+- **Learning Rate Decay**: Reduces the learning rate over iterations for finer updates.
+
+#### Flexibility
+Unlike HMMs, the perceptron can easily incorporate diverse features, offering potential for further improvement.
+
+## Results
+
+| Model             | Precision | Recall | F-score |
+|-------------------|-----------|--------|---------|
+| Baseline (Part 1) | 0.6234    | 0.6157 | 0.6195  |
+| Viterbi (Part 2)  | 0.8527    | 0.8457 | 0.8492  |
+| 4th-Best (Part 3) | 0.7125    | 0.7034 | 0.7079  |
+| Enhanced (Part 4) | 0.8325    | 0.8125 | 0.8224  |
+
+## Discussion
+
+### Performance Analysis
+- **Baseline**: The F-score of 0.6195 reflects its simplicity and inability to model tag dependencies.
+- **Viterbi**: An F-score of 0.8492 shows significant improvement due to sequence modeling.
+- **4th-Best**: The lower F-score (0.7079) is expected, as it’s a less likely sequence.
+- **Enhanced Perceptron**: An F-score of 0.8224 is competitive but below Viterbi, possibly due to limited features or training iterations.
+
+### Challenges
+- **Rare Words**: Specialized UNK tokens helped, but rare word handling could be refined (e.g., subword features).
+- **Efficiency**: Perceptron training was computationally intensive, mitigated by beam search and caching.
+
+### Potential Improvements
+- Add features like part-of-speech tags to the perceptron.
+- Explore Conditional Random Fields (CRFs) for better dependency modeling.
+- Tune hyperparameters (e.g., beam size, learning rate).
+
+## Conclusion
+
+This project demonstrates a progression from a simple baseline to advanced sequence labeling models for phrase chunking. The Viterbi algorithm achieved the highest F-score (0.8492), while the Structured Perceptron offers flexibility for future enhancements. Future work could focus on richer features or alternative models like CRFs to further boost performance.
