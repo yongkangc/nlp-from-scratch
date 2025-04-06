@@ -1,6 +1,6 @@
-# Hidden Markov Model and Structured Perceptron for English Phrase Chunking
+# Sequence Labeling Project
 
-This project implements a sequence labeling system for English phrase chunking using various probabilistic and machine learning approaches. The implementation includes multiple models of increasing complexity, from a simple baseline to more sophisticated approaches.
+This project implements and optimizes HMM and Structured Perceptron models for sequence labeling tasks.
 
 ## Project Overview
 
