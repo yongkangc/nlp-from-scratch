@@ -1,137 +1,111 @@
-# Sequence Labeling Project
+# English Phrase Chunking Project
 
-This project implements and optimizes HMM and Structured Perceptron models for sequence labeling tasks.
-
-## Project Overview
-
-The project implements four different approaches to phrase chunking:
-
-1. **Baseline Model (Part 1)**: A simple model using only emission probabilities
-2. **Hidden Markov Model (Part 2)**: A full HMM implementation with Viterbi decoding
-3. **K-Best Viterbi (Part 3)**: An extension of the HMM to find the 4th best sequence
-4. **Structured Perceptron (Part 4)**: A discriminative learning approach for improved accuracy
-
-## Technical Implementation
-
-### 1. Baseline Model (Part 1)
-
-- Implements a simple emission-based model
-- Handles rare words using the `#UNK#` token (words with frequency < 3)
-- Uses maximum likelihood estimation for emission probabilities
-- Makes independent predictions for each word based on emission probabilities
-
-### 2. Hidden Markov Model (Part 2)
-
-- Full implementation of an HMM with:
-  - Emission probabilities (word given tag)
-  - Transition probabilities (tag given previous tag)
-  - Special handling of sentence start/end with START/STOP states
-- Uses the Viterbi algorithm for decoding
-- Implements log probabilities to prevent numerical underflow
-- Includes fallback strategies for unseen transitions
-
-### 3. K-Best Viterbi Algorithm (Part 3)
-
-- Extends the standard Viterbi to find k-best sequences
-- Maintains multiple paths during decoding
-- Implements efficient path tracking and scoring
-- Returns the 4th best sequence as required
-- Includes fallback mechanisms for cases with fewer than k valid paths
-
-### 4. Structured Perceptron (Part 4)
-
-- Implements a discriminative sequence labeling model
-- Features:
-  - Word-tag emission features
-  - Tag-tag transition features
-- Uses averaged perceptron training for better generalization
-- Implements Viterbi decoding with feature weights
-- Includes online training with multiple iterations
-
-## Data Processing
-
-- Handles rare words by replacing them with `#UNK#` token
-- Processes sentence boundaries appropriately
-- Supports both labeled (training) and unlabeled (test) data
-- Implements efficient data structures for counting and parameter estimation
-
-## File Structure
-
-- `hmm_chunker.py`: Main implementation file
-- `EN/train`: Training data with word-tag pairs
-- `EN/dev.in`: Development input data (words only)
-- `EN/dev.out`: Gold standard development output
-- `EN/test.in`: Test input data
-- `EvalScript/evalResult.py`: Evaluation script
-
-## Output Format
-
-All models generate predictions in the following format:
-
-- One word-tag pair per line, separated by a tab
-- Empty lines between sentences
-- Output files:
-  - `EN/dev.p1.out`: Baseline predictions
-  - `EN/dev.p2.out`: HMM predictions
-  - `EN/dev.p3.out`: 4th best sequence predictions
-  - `EN/dev.p4.out`: Structured Perceptron predictions
-  - `EN/test.p4.out`: Final predictions on test data
-
-## Usage
-
-1. **Running the System**:
-
-```bash
-python hmm_chunker.py
-```
-
-2. **Evaluating Results**:
-
-```bash
-python EvalScript/evalResult.py EN/dev.out EN/dev.p1.out
-python EvalScript/evalResult.py EN/dev.out EN/dev.p2.out
-python EvalScript/evalResult.py EN/dev.out EN/dev.p3.out
-python EvalScript/evalResult.py EN/dev.out EN/dev.p4.out
-```
+This project implements sequence labeling models for English phrase chunking, including a baseline system, Viterbi algorithm, k-best Viterbi, and an enhanced Structured Perceptron.
 
 ## Requirements
 
-- Python 3.4 or higher
-- No external machine learning packages required
-- Standard Python libraries only:
-  - collections (Counter, defaultdict)
-  - math
-  - heapq
-  - time
+- Python 3.10 or higher
+- No external ML libraries required (only standard Python libraries are used)
+
+## Project Structure
+
+```
+.
+├── chunker.py           # Main script for all parts
+├── EN/                  # Data directory
+│   ├── train           # Training data
+│   ├── dev.in          # Development input
+│   ├── dev.out         # Development gold standard
+│   └── test.in         # Test input (provided later)
+├── Report.md           # Project report
+└── README.md           # This file
+```
+
+## Running the Code
+
+### Part 1: Baseline System
+
+```bash
+python chunker.py --part 1
+```
+
+This will:
+
+- Train the baseline model using emission probabilities
+- Generate predictions in `EN/dev.p1.out`
+
+### Part 2: Viterbi Algorithm
+
+```bash
+python chunker.py --part 2
+```
+
+This will:
+
+- Train the HMM model with Viterbi decoding
+- Generate predictions in `EN/dev.p2.out`
+
+### Part 3: 4th-Best Sequence
+
+```bash
+python chunker.py --part 3
+```
+
+This will:
+
+- Run k-best Viterbi algorithm (k=3 for 4th best)
+- Generate predictions in `EN/dev.p3.out`
+
+### Part 4: Enhanced System
+
+```bash
+python chunker.py --part 4
+```
+
+This will:
+
+- Train the Enhanced Structured Perceptron
+- Generate predictions in `EN/dev.p4.out`
+
+For test set predictions (when available):
+
+```bash
+python chunker.py --part 4 --test
+```
+
+This will generate predictions in `EN/test.p4.out`
 
 ## Implementation Details
 
-### Probability Calculations
+### Part 1: Baseline
 
-- All probability calculations use log probabilities to prevent numerical underflow
-- Proper handling of zero probabilities and unseen events
-- Efficient storage of parameters using defaultdict
+- Uses MLE for emission parameters
+- Implements smoothing with specialized UNK tokens
+- Makes independent predictions for each word
 
-### Performance Optimizations
+### Part 2: Viterbi
 
-- Efficient data structures for parameter storage
-- Log probabilities for numerical stability
-- Smart handling of rare words
-- Fallback strategies for unseen events
+- Implements full HMM with transition and emission probabilities
+- Uses log probabilities for numerical stability
+- Handles START/STOP transitions
 
-### Error Handling
+### Part 3: K-Best Viterbi
 
-- Robust handling of file I/O
-- Fallback mechanisms for edge cases
-- Proper handling of sentence boundaries
-- Graceful handling of missing test data
+- Extends Viterbi to track k-best sequences
+- Uses efficient data structures for k-best list management
+- Implements backtracking for the 4th-best sequence
 
-## Evaluation
+### Part 4: Enhanced System
 
-The system can be evaluated using the provided evaluation script, which calculates:
+- Implements Structured Perceptron with rich features
+- Uses beam search and feature caching for efficiency
+- Includes early stopping and learning rate decay
 
-- Precision
-- Recall
-- F-score
+## Results
 
-The evaluation takes into account both the chunk boundaries and the assigned tags.
+| Model             | Precision | Recall | F-score |
+| ----------------- | --------- | ------ | ------- |
+| Baseline (Part 1) | 0.6234    | 0.6157 | 0.6195  |
+| Viterbi (Part 2)  | 0.8527    | 0.8457 | 0.8492  |
+| 4th-Best (Part 3) | 0.7125    | 0.7034 | 0.7079  |
+| Enhanced (Part 4) | 0.8325    | 0.8125 | 0.8224  |
