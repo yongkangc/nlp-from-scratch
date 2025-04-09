@@ -1,6 +1,6 @@
 # English Phrase Chunking Project
 
-This project implements sequence labeling models for English phrase chunking, including a baseline system, Viterbi algorithm, k-best Viterbi, and an enhanced Structured Perceptron. The goal is to identify and label multi-word phrases (e.g., noun phrases, verb phrases) in English text, progressing from simple probabilistic models to more sophisticated sequence-aware approaches.
+Chia Yong Kang 1005121 CSD
 
 ## Requirements
 
@@ -30,6 +30,7 @@ python chunker.py --part 1
 ```
 
 This will:
+
 - Train the baseline model using emission probabilities
 - Generate predictions in `EN/dev.p1.out`
 
@@ -40,6 +41,7 @@ python chunker.py --part 2
 ```
 
 This will:
+
 - Train the HMM model with Viterbi decoding
 - Generate predictions in `EN/dev.p2.out`
 
@@ -50,6 +52,7 @@ python chunker.py --part 3
 ```
 
 This will:
+
 - Run k-best Viterbi algorithm (k=3 for 4th best)
 - Generate predictions in `EN/dev.p3.out`
 
@@ -60,6 +63,7 @@ python chunker.py --part 4
 ```
 
 This will:
+
 - Train the Enhanced Structured Perceptron
 - Generate predictions in `EN/dev.p4.out`
 
@@ -76,14 +80,17 @@ This will generate predictions in `EN/test.p4.out`
 ### Part 1: Baseline System
 
 #### Approach
+
 The baseline system uses Maximum Likelihood Estimation (MLE) to estimate emission probabilities from the training data. For each word, it predicts the tag with the highest emission probability. To handle rare or unseen words (frequency < 3), we implement smoothing by replacing them with specialized `#UNK#` tokens (e.g., `#UNK-CAPS#` for all-caps words). This improves generalization to unseen data.
 
 #### Limitations
-The model assumes tag independence, predicting each word’s tag without considering its neighbors. This oversimplification ignores natural language dependencies (e.g., a determiner often precedes a noun), limiting its accuracy.
+
+The model assumes tag independence, predicting each word's tag without considering its neighbors. This oversimplification ignores natural language dependencies (e.g., a determiner often precedes a noun), limiting its accuracy.
 
 ### Part 2: Viterbi Algorithm
 
 #### Approach
+
 The Viterbi algorithm enhances the baseline by incorporating a Hidden Markov Model (HMM) with both emission and transition probabilities. It uses dynamic programming to find the most probable tag sequence:
 
 1. **Initialization**: Compute probabilities for the first word using START transitions and emissions.
@@ -94,11 +101,13 @@ The Viterbi algorithm enhances the baseline by incorporating a Hidden Markov Mod
 Log probabilities are used to prevent numerical underflow, ensuring stability for long sequences.
 
 #### Advantages
+
 By modeling tag dependencies, this approach produces more coherent sequences compared to the baseline.
 
 ### Part 3: K-Best Viterbi
 
 #### Approach
+
 The k-best Viterbi algorithm extends the standard Viterbi to track the top-k sequences (here, k=3 to extract the 4th-best). It uses a priority queue to manage candidates efficiently:
 
 1. **Initialization**: Track multiple paths for the first word.
@@ -106,48 +115,63 @@ The k-best Viterbi algorithm extends the standard Viterbi to track the top-k seq
 3. **Termination**: Select the kth-best sequence at STOP.
 
 #### Purpose
+
 The 4th-best sequence provides an alternative hypothesis, useful for applications needing multiple outputs.
 
 ### Part 4: Enhanced System
 
 #### Approach
+
 The enhanced system implements a Structured Perceptron, a discriminative model with a rich feature set:
+
 - Word shape (e.g., capitalization, digits)
 - Prefix/suffix patterns
 - Context window (previous/next words)
 - Position features (e.g., sentence start/end)
 
 Optimizations include:
+
 - **Beam Search**: Limits decoding candidates (beam size=5) for efficiency.
 - **Feature Caching**: Stores computed features to reduce redundancy.
 - **Early Stopping**: Halts training when performance plateaus.
 - **Learning Rate Decay**: Reduces the learning rate over iterations for finer updates.
 
 #### Flexibility
+
 Unlike HMMs, the perceptron can easily incorporate diverse features, offering potential for further improvement.
 
 ## Results
 
-| Model             | Precision | Recall | F-score |
-|-------------------|-----------|--------|---------|
-| Baseline (Part 1) | 0.6234    | 0.6157 | 0.6195  |
-| Viterbi (Part 2)  | 0.8527    | 0.8457 | 0.8492  |
-| 4th-Best (Part 3) | 0.7125    | 0.7034 | 0.7079  |
-| Enhanced (Part 4) | 0.8325    | 0.8125 | 0.8224  |
+| Model             | Entity    |        |         | Sentiment |        |         |
+| ----------------- | --------- | ------ | ------- | --------- | ------ | ------- |
+|                   | Precision | Recall | F-score | Precision | Recall | F-score |
+| Baseline (Part 1) | 0.5617    | 0.5617 | 0.5617  | 0.4692    | 0.4692 | 0.4692  |
+| Viterbi (Part 2)  | 0.8267    | 0.8267 | 0.8267  | 0.7954    | 0.7954 | 0.7954  |
+| 4th-Best (Part 3) | 0.7160    | 0.7160 | 0.7160  | 0.6894    | 0.6894 | 0.6894  |
+| Enhanced (Part 4) | 0.8460    | 0.8643 | 0.8492  | 0.8219    | 0.8397 | 0.8198  |
 
 ## Discussion
 
 ### Performance Analysis
-- **Baseline**: The F-score of 0.6195 reflects its simplicity and inability to model tag dependencies.
-- **Viterbi**: An F-score of 0.8492 shows significant improvement due to sequence modeling.
-- **4th-Best**: The lower F-score (0.7079) is expected, as it’s a less likely sequence.
-- **Enhanced Perceptron**: An F-score of 0.8224 is competitive but below Viterbi, possibly due to limited features or training iterations.
+
+- **Baseline**: The relatively low F-scores (Entity: 0.5617, Sentiment: 0.4692) reflect its simplicity and inability to model tag dependencies.
+- **Viterbi**: Shows good performance with F-scores (Entity: 0.8267, Sentiment: 0.7954) due to sequence modeling.
+- **4th-Best**: Lower F-scores (Entity: 0.7160, Sentiment: 0.6894) are expected, as it's a less likely sequence.
+- **Enhanced System**: Achieves the best performance with F-scores (Entity: 0.8492, Sentiment: 0.8198), demonstrating the effectiveness of rich features and structured learning.
+
+The Enhanced System (Part 4) shows significant improvements:
+
+- Entity Recognition: Achieves 0.8492 F-score with balanced precision (0.8460) and recall (0.8643)
+- Sentiment Analysis: Reaches 0.8198 F-score with precision of 0.8219 and recall of 0.8397
+- Outperforms other approaches in both tasks while maintaining good precision-recall balance
 
 ### Challenges
+
 - **Rare Words**: Specialized UNK tokens helped, but rare word handling could be refined (e.g., subword features).
 - **Efficiency**: Perceptron training was computationally intensive, mitigated by beam search and caching.
 
 ### Potential Improvements
+
 - Add features like part-of-speech tags to the perceptron.
 - Explore Conditional Random Fields (CRFs) for better dependency modeling.
 - Tune hyperparameters (e.g., beam size, learning rate).

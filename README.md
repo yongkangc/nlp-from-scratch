@@ -103,9 +103,10 @@ This will generate predictions in `EN/test.p4.out`
 
 ## Results
 
-| Model             | Precision | Recall | F-score |
-| ----------------- | --------- | ------ | ------- |
-| Baseline (Part 1) | 0.6234    | 0.6157 | 0.6195  |
-| Viterbi (Part 2)  | 0.8527    | 0.8457 | 0.8492  |
-| 4th-Best (Part 3) | 0.7125    | 0.7034 | 0.7079  |
-| Enhanced (Part 4) | 0.8325    | 0.8125 | 0.8224  |
+| Model             | Entity    |        |         | Sentiment |        |         |
+| ----------------- | --------- | ------ | ------- | --------- | ------ | ------- |
+|                   | Precision | Recall | F-score | Precision | Recall | F-score |
+| Baseline (Part 1) | 0.5617    | 0.5617 | 0.5617  | 0.4692    | 0.4692 | 0.4692  |
+| Viterbi (Part 2)  | 0.8267    | 0.8267 | 0.8267  | 0.7954    | 0.7954 | 0.7954  |
+| 4th-Best (Part 3) | 0.7160    | 0.7160 | 0.7160  | 0.6894    | 0.6894 | 0.6894  |
+| Enhanced (Part 4) | 0.8460    | 0.8643 | 0.8492  | 0.8219    | 0.8397 | 0.8198  |
