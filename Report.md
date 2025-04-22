@@ -1,3 +1,4 @@
+
 # English Phrase Chunking Project
 
 Chia Yong Kang 1005121 CSD
@@ -142,28 +143,26 @@ Unlike HMMs, the perceptron can easily incorporate diverse features, offering po
 
 ## Results
 
-| Model             | Entity    |        |         | Sentiment |        |         |
-| ----------------- | --------- | ------ | ------- | --------- | ------ | ------- |
-|                   | Precision | Recall | F-score | Precision | Recall | F-score |
-| Baseline (Part 1) | 0.5617    | 0.5617 | 0.5617  | 0.4692    | 0.4692 | 0.4692  |
-| Viterbi (Part 2)  | 0.8267    | 0.8267 | 0.8267  | 0.7954    | 0.7954 | 0.7954  |
-| 4th-Best (Part 3) | 0.7160    | 0.7160 | 0.7160  | 0.6894    | 0.6894 | 0.6894  |
-| Enhanced (Part 4) | 0.8460    | 0.8643 | 0.8492  | 0.8219    | 0.8397 | 0.8198  |
+| Model             | Entity Precision | Entity Recall | Entity F-score |
+| ----------------- | --------------- | ------------ | -------------- |
+| Baseline (Part 1) | 0.5617          | 0.5617       | 0.5617         |
+| Viterbi (Part 2)  | 0.8267          | 0.8267       | 0.8267         |
+| 4th-Best (Part 3) | 0.7160          | 0.7160       | 0.7160         |
+| Enhanced (Part 4) | 0.8460          | 0.8643       | 0.8492         |
 
 ## Discussion
 
 ### Performance Analysis
 
-- **Baseline**: The relatively low F-scores (Entity: 0.5617, Sentiment: 0.4692) reflect its simplicity and inability to model tag dependencies.
-- **Viterbi**: Shows good performance with F-scores (Entity: 0.8267, Sentiment: 0.7954) due to sequence modeling.
-- **4th-Best**: Lower F-scores (Entity: 0.7160, Sentiment: 0.6894) are expected, as it's a less likely sequence.
-- **Enhanced System**: Achieves the best performance with F-scores (Entity: 0.8492, Sentiment: 0.8198), demonstrating the effectiveness of rich features and structured learning.
+- **Baseline**: The relatively low F-score (0.5617) reflects its simplicity and inability to model tag dependencies.
+- **Viterbi**: Shows good performance with an F-score of 0.8267 due to sequence modeling.
+- **4th-Best**: Lower F-score (0.7160) is expected, as it's a less likely sequence.
+- **Enhanced System**: Achieves the best performance with an F-score of 0.8492, demonstrating the effectiveness of rich features and structured learning.
 
 The Enhanced System (Part 4) shows significant improvements:
 
 - Entity Recognition: Achieves 0.8492 F-score with balanced precision (0.8460) and recall (0.8643)
-- Sentiment Analysis: Reaches 0.8198 F-score with precision of 0.8219 and recall of 0.8397
-- Outperforms other approaches in both tasks while maintaining good precision-recall balance
+- Outperforms other approaches while maintaining good precision-recall balance
 
 ### Challenges
 
@@ -178,4 +177,4 @@ The Enhanced System (Part 4) shows significant improvements:
 
 ## Conclusion
 
-This project demonstrates a progression from a simple baseline to advanced sequence labeling models for phrase chunking. The Viterbi algorithm achieved the highest F-score (0.8492), while the Structured Perceptron offers flexibility for future enhancements. Future work could focus on richer features or alternative models like CRFs to further boost performance.
+This project demonstrates a progression from a simple baseline to advanced sequence labeling models for phrase chunking. The Viterbi algorithm achieved a strong F-score (0.8267), while the Structured Perceptron offers flexibility for future enhancements. Future work could focus on richer features or alternative models like CRFs to further boost performance.
