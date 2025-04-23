@@ -2,6 +2,7 @@
 # English Phrase Chunking Project
 
 Chia Yong Kang 1005121 CSD
+Malik Dahel 1009836
 
 ## Requirements
 
