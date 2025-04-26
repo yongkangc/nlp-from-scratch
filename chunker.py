@@ -380,6 +380,28 @@ def k_best_viterbi(sentence, vocabulary, tags, transition_count, tag_count,
 
     return path
 
+def evaluate(gold_path, pred_path):
+    gold_chunks = read_chunks(gold_path)
+    pred_chunks = read_chunks(pred_path)
+
+    correct = 0
+    total_pred = 0
+    total_gold = 0
+
+    for gold_sent, pred_sent in zip(gold_chunks, pred_chunks):
+        gold = extract_entity_chunks(gold_sent)
+        pred = extract_entity_chunks(pred_sent)
+        correct += len(gold & pred)
+        total_pred += len(pred)
+        total_gold += len(gold)
+
+    precision = correct / total_pred if total_pred > 0 else 0
+    recall = correct / total_gold if total_gold > 0 else 0
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
+
+    return precision, recall, f1
+
+
 
 class EnhancedPerceptron:
     """Enhanced Structured Perceptron for sequence labeling (Part 4)."""
@@ -678,14 +700,46 @@ def main():
     dev_sentences = read_unlabeled_data('EN/dev.in')
 
     if args.part == 1:
-        print("Running baseline system...")
+    print("Running Baseline system with multiple k smoothing values...")
+    
+    smoothing_ks = [1, 2, 3, 5, 10]  # List of k values to test
+    
+    for k_for_smoothing in smoothing_ks:
+        print(f"\nTesting k = {k_for_smoothing}...")
+        
+        # Read training data
+        train_sentences = read_data('EN/train')
+        
+        # Build vocabulary and apply rare word handling
+        word_freq = get_word_freq(train_sentences)
+        rare_words = {word for word, freq in word_freq.items() if freq < k_for_smoothing}
+        modified_train_sentences = modify_training_data(train_sentences, rare_words)
+        
+        # Estimate emission parameters
+        tag_count, word_tag_count = estimate_emission_params(modified_train_sentences)
+        
+        # Read development data
+        dev_sentences = read_unlabeled_data('EN/dev.in')
+        
+        # Predict tags for development set
         predictions = []
+        vocabulary = {word for sentence in modified_train_sentences for word, _ in sentence}
+        
         for sentence in dev_sentences:
             sentence_preds = [predict_baseline(word, vocabulary, tag_count, word_tag_count)
                               for word in sentence]
             predictions.append(sentence_preds)
-        write_output('EN/dev.p1.out', dev_sentences, predictions)
-        print("Baseline predictions written to EN/dev.p1.out")
+        
+        # Write predictions to file named with k
+        output_filename = f'EN/dev.p1.k{k_for_smoothing}.out'
+        write_output(output_filename, dev_sentences, predictions)
+        
+        # Evaluate the output
+        try:
+            precision, recall, f1 = evaluate('EN/dev.out', output_filename)
+            print(f"Results for k={k_for_smoothing}: Precision={precision:.4f}, Recall={recall:.4f}, F1={f1:.4f}")
+        except Exception as e:
+            print(f"Could not evaluate for k={k_for_smoothing}: {e}")
 
     elif args.part == 2:
         print("Running Viterbi algorithm...")
