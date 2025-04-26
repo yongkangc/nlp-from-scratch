@@ -652,7 +652,8 @@ def main():
 
     # Get word frequencies and identify rare words
     word_freq = get_word_freq(train_sentences)
-    rare_words = {word for word, freq in word_freq.items() if freq < 3}
+    k_for_smoothing = 3  # Default value; you can manually change it
+    rare_words = {word for word, freq in word_freq.items() if freq < k_for_smoothing}
     vocabulary = {word for word, freq in word_freq.items() if freq >= 3}
     vocabulary.update(['#UNK#', '#UNK-CAPS#', '#UNK-INITCAP#',
                       '#UNK-NUM#', '#UNK-HYPHEN#', '#UNK-PUNCT#'])
