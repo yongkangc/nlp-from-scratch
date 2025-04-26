@@ -380,6 +380,43 @@ def k_best_viterbi(sentence, vocabulary, tags, transition_count, tag_count,
 
     return path
 
+def read_chunks(file_path):
+    chunks = []
+    current_chunk = []
+    with open(file_path, encoding='utf-8') as f:
+        for line in f:
+            if line.strip() == "":
+                if current_chunk:
+                    chunks.append(current_chunk)
+                    current_chunk = []
+            else:
+                parts = line.strip().split()
+                if len(parts) == 2:
+                    word, tag = parts
+                    current_chunk.append((word, tag))
+        if current_chunk:
+            chunks.append(current_chunk)
+    return chunks
+
+def extract_entity_chunks(tagged_sentence):
+    chunks = []
+    chunk = []
+    for i, (word, tag) in enumerate(tagged_sentence):
+        if tag.startswith("B-"):
+            if chunk:
+                chunks.append(chunk)
+            chunk = [(i, tag[2:])]
+        elif tag.startswith("I-") and chunk and tag[2:] == chunk[-1][1]:
+            chunk.append((i, tag[2:]))
+        else:
+            if chunk:
+                chunks.append(chunk)
+                chunk = []
+    if chunk:
+        chunks.append(chunk)
+    return set(tuple(c) for c in chunks)
+
+
 def evaluate(gold_path, pred_path):
     gold_chunks = read_chunks(gold_path)
     pred_chunks = read_chunks(pred_path)
