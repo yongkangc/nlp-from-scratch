@@ -700,46 +700,46 @@ def main():
     dev_sentences = read_unlabeled_data('EN/dev.in')
 
     if args.part == 1:
-    print("Running Baseline system with multiple k smoothing values...")
-    
-    smoothing_ks = [1, 2, 3, 5, 10]  # List of k values to test
-    
-    for k_for_smoothing in smoothing_ks:
-        print(f"\nTesting k = {k_for_smoothing}...")
+        print("Running Baseline system with multiple k smoothing values...")
         
-        # Read training data
-        train_sentences = read_data('EN/train')
+        smoothing_ks = [1, 2, 3, 5, 10]  # List of k values to test
         
-        # Build vocabulary and apply rare word handling
-        word_freq = get_word_freq(train_sentences)
-        rare_words = {word for word, freq in word_freq.items() if freq < k_for_smoothing}
-        modified_train_sentences = modify_training_data(train_sentences, rare_words)
-        
-        # Estimate emission parameters
-        tag_count, word_tag_count = estimate_emission_params(modified_train_sentences)
-        
-        # Read development data
-        dev_sentences = read_unlabeled_data('EN/dev.in')
-        
-        # Predict tags for development set
-        predictions = []
-        vocabulary = {word for sentence in modified_train_sentences for word, _ in sentence}
-        
-        for sentence in dev_sentences:
-            sentence_preds = [predict_baseline(word, vocabulary, tag_count, word_tag_count)
-                              for word in sentence]
-            predictions.append(sentence_preds)
-        
-        # Write predictions to file named with k
-        output_filename = f'EN/dev.p1.k{k_for_smoothing}.out'
-        write_output(output_filename, dev_sentences, predictions)
-        
-        # Evaluate the output
-        try:
-            precision, recall, f1 = evaluate('EN/dev.out', output_filename)
-            print(f"Results for k={k_for_smoothing}: Precision={precision:.4f}, Recall={recall:.4f}, F1={f1:.4f}")
-        except Exception as e:
-            print(f"Could not evaluate for k={k_for_smoothing}: {e}")
+        for k_for_smoothing in smoothing_ks:
+            print(f"\nTesting k = {k_for_smoothing}...")
+            
+            # Read training data
+            train_sentences = read_data('EN/train')
+            
+            # Build vocabulary and apply rare word handling
+            word_freq = get_word_freq(train_sentences)
+            rare_words = {word for word, freq in word_freq.items() if freq < k_for_smoothing}
+            modified_train_sentences = modify_training_data(train_sentences, rare_words)
+            
+            # Estimate emission parameters
+            tag_count, word_tag_count = estimate_emission_params(modified_train_sentences)
+            
+            # Read development data
+            dev_sentences = read_unlabeled_data('EN/dev.in')
+            
+            # Predict tags for development set
+            predictions = []
+            vocabulary = {word for sentence in modified_train_sentences for word, _ in sentence}
+            
+            for sentence in dev_sentences:
+                sentence_preds = [predict_baseline(word, vocabulary, tag_count, word_tag_count)
+                                  for word in sentence]
+                predictions.append(sentence_preds)
+            
+            # Write predictions to file named with k
+            output_filename = f'EN/dev.p1.k{k_for_smoothing}.out'
+            write_output(output_filename, dev_sentences, predictions)
+            
+            # Evaluate the output
+            try:
+                precision, recall, f1 = evaluate('EN/dev.out', output_filename)
+                print(f"Results for k={k_for_smoothing}: Precision={precision:.4f}, Recall={recall:.4f}, F1={f1:.4f}")
+            except Exception as e:
+                print(f"Could not evaluate for k={k_for_smoothing}: {e}")
 
     elif args.part == 2:
         print("Running Viterbi algorithm...")
