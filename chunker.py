@@ -129,7 +129,11 @@ def estimate_transition_params(sentences):
     return transition_count, tag_count
 
 
-def predict_baseline(word, vocabulary, tag_count, word_tag_count, specialized_unks=True):
+def predict_baseline(word,
+                     vocabulary,
+                     tag_count,
+                     word_tag_count,
+                     specialized_unks=True):
     """Predict tag using only emission probabilities (Part 1)."""
     if word not in vocabulary:
         if specialized_unks:
@@ -153,14 +157,22 @@ def predict_baseline(word, vocabulary, tag_count, word_tag_count, specialized_un
 
     # Fallback if no tag found
     if best_tag is None and tag_count:
-        best_tag = max(tag_count.keys(), key=lambda tag: tag_count[tag]
+        best_tag = max(tag_count.keys(),
+                       key=lambda tag: tag_count[tag]
                        if tag not in ["START", "STOP"] else 0)
 
     return best_tag
 
 
-def viterbi_decode(sentence, vocabulary, tags, transition_count, tag_count,
-                   word_tag_count, specialized_unks=True):
+def viterbi_decode(sentence,
+                   vocabulary,
+                   tags,
+                   transition_count,
+                   tag_count,
+                   word_tag_count,
+                   smoothing_k=0.01,
+                   num_tags=None,
+                   specialized_unks=True):
     """Implement Viterbi algorithm for HMM decoding (Part 2)."""
     n = len(sentence)
     if n == 0:
@@ -178,14 +190,21 @@ def viterbi_decode(sentence, vocabulary, tags, transition_count, tag_count,
         else:
             word = '#UNK#'
 
-    # Initialize first position
+    # Initialize first position (always from START)
     for tag in tags:
         if tag in ["START", "STOP"]:
             continue
 
-        # Probability of starting with this tag
-        trans_prob = transition_count["START"].get(tag, 0) / tag_count["START"] \
-            if tag_count["START"] > 0 else 0
+        trans_prob = (transition_count["START"].get(tag, 0) + smoothing_k) / (
+            tag_count["START"] + smoothing_k * num_tags)
+
+        emit_prob = word_tag_count[tag].get(
+            word, 0) / tag_count[tag] if tag_count[tag] > 0 else 0
+
+        if trans_prob > 0 and emit_prob > 0:
+            viterbi_log[0][tag] = math.log(trans_prob) + math.log(emit_prob)
+            backpointer[0][tag] = "START"
+
         # Emission probability
         emit_prob = word_tag_count[tag].get(word, 0) / tag_count[tag] \
             if tag_count[tag] > 0 else 0
@@ -214,14 +233,16 @@ def viterbi_decode(sentence, vocabulary, tags, transition_count, tag_count,
                 if prev_tag in ["START", "STOP"]:
                     continue
 
-                if viterbi_log[t-1].get(prev_tag, float("-inf")) == float("-inf"):
+                if viterbi_log[t - 1].get(prev_tag,
+                                          float("-inf")) == float("-inf"):
                     continue
 
-                trans_prob = transition_count[prev_tag].get(tag, 0) / tag_count[prev_tag] \
-                    if tag_count[prev_tag] > 0 else 0
+                trans_prob = (transition_count[prev_tag].get(tag, 0) +
+                              smoothing_k) / (tag_count[prev_tag] +
+                                              smoothing_k * num_tags)
 
                 if trans_prob > 0:
-                    score = viterbi_log[t-1][prev_tag] + math.log(trans_prob)
+                    score = viterbi_log[t - 1][prev_tag] + math.log(trans_prob)
                     if score > max_score:
                         max_score = score
                         best_prev_tag = prev_tag
@@ -242,7 +263,7 @@ def viterbi_decode(sentence, vocabulary, tags, transition_count, tag_count,
         if tag in ["START", "STOP"]:
             continue
 
-        final_score = viterbi_log[n-1].get(tag, float("-inf"))
+        final_score = viterbi_log[n - 1].get(tag, float("-inf"))
         if final_score == float("-inf"):
             continue
 
@@ -257,21 +278,28 @@ def viterbi_decode(sentence, vocabulary, tags, transition_count, tag_count,
 
     # Fallback if no valid path found
     if best_final_tag is None:
-        best_final_tag = max(tags, key=lambda tag: tag_count[tag]
+        best_final_tag = max(tags,
+                             key=lambda tag: tag_count[tag]
                              if tag not in ["START", "STOP"] else 0)
         return [best_final_tag] * n
 
     # Backtrack to find the best path
     path = [best_final_tag]
-    for t in range(n-1, 0, -1):
+    for t in range(n - 1, 0, -1):
         prev_tag = backpointer[t][path[0]]
         path.insert(0, prev_tag)
 
     return path
 
 
-def k_best_viterbi(sentence, vocabulary, tags, transition_count, tag_count,
-                   word_tag_count, k=3, specialized_unks=True):
+def k_best_viterbi(sentence,
+                   vocabulary,
+                   tags,
+                   transition_count,
+                   tag_count,
+                   word_tag_count,
+                   k=3,
+                   specialized_unks=True):
     """Find the k-best sequences using modified Viterbi (Part 3)."""
     n = len(sentence)
     if n == 0:
@@ -279,8 +307,10 @@ def k_best_viterbi(sentence, vocabulary, tags, transition_count, tag_count,
 
     # Initialize DP tables for k-best paths
     # dp[t][y] = list of (score, backpointer, path_idx) tuples
-    dp = [{tag: [] for tag in tags if tag not in ["START", "STOP"]}
-          for _ in range(n)]
+    dp = [{
+        tag: []
+        for tag in tags if tag not in ["START", "STOP"]
+    } for _ in range(n)]
 
     # Process first word
     word = sentence[0]
@@ -324,7 +354,8 @@ def k_best_viterbi(sentence, vocabulary, tags, transition_count, tag_count,
                     continue
 
                 # Try all paths from previous state
-                for prev_path_idx, (prev_score, _, _) in enumerate(dp[t-1][prev_tag]):
+                for prev_path_idx, (prev_score, _,
+                                    _) in enumerate(dp[t - 1][prev_tag]):
                     if prev_score == float("-inf"):
                         continue
 
@@ -350,7 +381,7 @@ def k_best_viterbi(sentence, vocabulary, tags, transition_count, tag_count,
         if tag in ["START", "STOP"]:
             continue
 
-        for path_idx, (score, _, _) in enumerate(dp[n-1][tag]):
+        for path_idx, (score, _, _) in enumerate(dp[n - 1][tag]):
             if score == float("-inf"):
                 continue
 
@@ -365,7 +396,8 @@ def k_best_viterbi(sentence, vocabulary, tags, transition_count, tag_count,
 
     # Fallback if fewer than k paths
     if not final_candidates or len(final_candidates) <= k:
-        most_common_tag = max(tags, key=lambda tag: tag_count[tag]
+        most_common_tag = max(tags,
+                              key=lambda tag: tag_count[tag]
                               if tag not in ["START", "STOP"] else 0)
         return [most_common_tag] * n
 
@@ -374,11 +406,12 @@ def k_best_viterbi(sentence, vocabulary, tags, transition_count, tag_count,
 
     # Backtrack to reconstruct the path
     path = [last_tag]
-    for t in range(n-1, 0, -1):
+    for t in range(n - 1, 0, -1):
         _, prev_tag, path_idx = dp[t][path[0]][path_idx]
         path.insert(0, prev_tag)
 
     return path
+
 
 def read_chunks(file_path):
     chunks = []
@@ -397,6 +430,7 @@ def read_chunks(file_path):
         if current_chunk:
             chunks.append(current_chunk)
     return chunks
+
 
 def extract_entity_chunks(tagged_sentence):
     chunks = []
@@ -434,10 +468,10 @@ def evaluate(gold_path, pred_path):
 
     precision = correct / total_pred if total_pred > 0 else 0
     recall = correct / total_gold if total_gold > 0 else 0
-    f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
+    f1 = 2 * precision * recall / (precision +
+                                   recall) if precision + recall > 0 else 0
 
     return precision, recall, f1
-
 
 
 class EnhancedPerceptron:
@@ -482,14 +516,14 @@ class EnhancedPerceptron:
             # Context features (for shorter sentences)
             if len(words) < 20:
                 if i > 0:
-                    prev_word = words[i-1]
+                    prev_word = words[i - 1]
                     if prev_word not in self.vocabulary:
                         prev_word = classify_token(
                             prev_word) if self.specialized_unks else '#UNK#'
                     features[('prev_word', prev_word, tag)] += 1
 
                 if i < len(words) - 1:
-                    next_word = words[i+1]
+                    next_word = words[i + 1]
                     if next_word not in self.vocabulary:
                         next_word = classify_token(
                             next_word) if self.specialized_unks else '#UNK#'
@@ -544,8 +578,9 @@ class EnhancedPerceptron:
 
         # Beam pruning for first word
         if len(viterbi[0]) > beam_size:
-            top_tags = sorted(viterbi[0].items(), key=lambda x: x[1], reverse=True)[
-                :beam_size]
+            top_tags = sorted(viterbi[0].items(),
+                              key=lambda x: x[1],
+                              reverse=True)[:beam_size]
             viterbi[0] = {tag: score for tag, score in top_tags}
             backpointer[0] = {tag: backpointer[0][tag] for tag, _ in top_tags}
 
@@ -556,7 +591,7 @@ class EnhancedPerceptron:
                 word = classify_token(
                     word) if self.specialized_unks else '#UNK#'
 
-            prev_tags = list(viterbi[t-1].keys())
+            prev_tags = list(viterbi[t - 1].keys())
 
             for tag in self.tags:
                 max_score = float("-inf")
@@ -578,7 +613,7 @@ class EnhancedPerceptron:
                     if len(word) > 2 and not word.startswith('#UNK'):
                         features[('suffix2', word[-2:], tag)] += 1
 
-                    score = viterbi[t-1][prev_tag] + self.score(features)
+                    score = viterbi[t - 1][prev_tag] + self.score(features)
                     if score > max_score:
                         max_score = score
                         best_prev_tag = prev_tag
@@ -589,21 +624,24 @@ class EnhancedPerceptron:
 
             # Beam pruning
             if len(viterbi[t]) > beam_size:
-                top_tags = sorted(viterbi[t].items(), key=lambda x: x[1], reverse=True)[
-                    :beam_size]
+                top_tags = sorted(viterbi[t].items(),
+                                  key=lambda x: x[1],
+                                  reverse=True)[:beam_size]
                 viterbi[t] = {tag: score for tag, score in top_tags}
-                backpointer[t] = {tag: backpointer[t][tag]
-                                  for tag, _ in top_tags}
+                backpointer[t] = {
+                    tag: backpointer[t][tag]
+                    for tag, _ in top_tags
+                }
 
         # No valid path
-        if not viterbi[n-1]:
+        if not viterbi[n - 1]:
             return [self.tags[0]] * n
 
         # Find best final tag
         max_final_score = float("-inf")
         best_final_tag = None
 
-        for tag in viterbi[n-1]:
+        for tag in viterbi[n - 1]:
             score = viterbi[n-1][tag] + \
                 self.weights[('transition', tag, 'STOP')]
             if score > max_final_score:
@@ -615,13 +653,17 @@ class EnhancedPerceptron:
 
         # Backtrack
         path = [best_final_tag]
-        for t in range(n-1, 0, -1):
+        for t in range(n - 1, 0, -1):
             prev_tag = backpointer[t][path[0]]
             path.insert(0, prev_tag)
 
         return path
 
-    def train(self, train_sentences, num_iterations=5, learning_rate=1.0, decay_rate=0.8):
+    def train(self,
+              train_sentences,
+              num_iterations=5,
+              learning_rate=1.0,
+              decay_rate=0.8):
         """Train the perceptron with early stopping and learning rate decay."""
         print(
             f"Training enhanced perceptron for {num_iterations} iterations...")
@@ -630,9 +672,10 @@ class EnhancedPerceptron:
         correct_predictions = set()
 
         for iteration in range(num_iterations):
-            current_lr = learning_rate * (decay_rate ** iteration)
+            current_lr = learning_rate * (decay_rate**iteration)
             print(
-                f"Iteration {iteration+1}/{num_iterations} (LR: {current_lr:.4f})")
+                f"Iteration {iteration+1}/{num_iterations} (LR: {current_lr:.4f})"
+            )
 
             start_time = time.time()
             num_mistakes = 0
@@ -673,14 +716,16 @@ class EnhancedPerceptron:
 
             print(
                 f"  Mistakes: {num_mistakes}/{remaining} ({mistake_rate:.2%})")
-            print(f"  Correct: {len(correct_predictions)}/{len(train_sentences)} "
-                  f"({len(correct_predictions)/len(train_sentences):.2%})")
+            print(
+                f"  Correct: {len(correct_predictions)}/{len(train_sentences)} "
+                f"({len(correct_predictions)/len(train_sentences):.2%})")
             print(f"  Time: {elapsed:.2f} seconds")
 
             # Early stopping
             if len(correct_predictions) > 0.92 * len(train_sentences):
-                print(f"Early stopping: {len(correct_predictions)/len(train_sentences):.2%} "
-                      "sentences correct")
+                print(
+                    f"Early stopping: {len(correct_predictions)/len(train_sentences):.2%} "
+                    "sentences correct")
                 break
 
         print("Training completed.")
@@ -698,10 +743,14 @@ def write_output(file_path, words, predictions):
 def main():
     """Main function to run the chunker."""
     parser = argparse.ArgumentParser(description="English Phrase Chunking")
-    parser.add_argument('--part', type=int, required=True, choices=[1, 2, 3, 4],
+    parser.add_argument('--part',
+                        type=int,
+                        required=True,
+                        choices=[1, 2, 3, 4],
                         help="Which part to run (1: Baseline, 2: Viterbi, "
                         "3: 4th-Best, 4: Enhanced)")
-    parser.add_argument('--test', action='store_true',
+    parser.add_argument('--test',
+                        action='store_true',
                         help="Run on test data (only for Part 4)")
     args = parser.parse_args()
 
@@ -712,15 +761,20 @@ def main():
     # Get word frequencies and identify rare words
     word_freq = get_word_freq(train_sentences)
     k_for_smoothing = 3  # Default value; you can manually change it
-    rare_words = {word for word, freq in word_freq.items() if freq < k_for_smoothing}
+    rare_words = {
+        word
+        for word, freq in word_freq.items() if freq < k_for_smoothing
+    }
     vocabulary = {word for word, freq in word_freq.items() if freq >= 3}
-    vocabulary.update(['#UNK#', '#UNK-CAPS#', '#UNK-INITCAP#',
-                      '#UNK-NUM#', '#UNK-HYPHEN#', '#UNK-PUNCT#'])
+    vocabulary.update([
+        '#UNK#', '#UNK-CAPS#', '#UNK-INITCAP#', '#UNK-NUM#', '#UNK-HYPHEN#',
+        '#UNK-PUNCT#'
+    ])
 
     # Modify training data with UNK tokens
     print("Processing training data...")
-    modified_train_sentences = modify_training_data(
-        train_sentences, rare_words)
+    modified_train_sentences = modify_training_data(train_sentences,
+                                                    rare_words)
 
     # Estimate parameters
     tag_count, word_tag_count = estimate_emission_params(
@@ -729,8 +783,9 @@ def main():
         train_sentences)
 
     # Get all tags (excluding START/STOP for prediction)
-    all_tags = [tag for tag in tag_count.keys() if tag not in [
-        "START", "STOP"]]
+    all_tags = [
+        tag for tag in tag_count.keys() if tag not in ["START", "STOP"]
+    ]
 
     # Read development data
     print("Reading development data...")
@@ -738,53 +793,73 @@ def main():
 
     if args.part == 1:
         print("Running Baseline system with multiple k smoothing values...")
-        
+
         smoothing_ks = [1, 2, 3, 5, 10]  # List of k values to test
-        
+
         for k_for_smoothing in smoothing_ks:
             print(f"\nTesting k = {k_for_smoothing}...")
-            
+
             # Read training data
             train_sentences = read_data('EN/train')
-            
+
             # Build vocabulary and apply rare word handling
             word_freq = get_word_freq(train_sentences)
-            rare_words = {word for word, freq in word_freq.items() if freq < k_for_smoothing}
-            modified_train_sentences = modify_training_data(train_sentences, rare_words)
-            
+            rare_words = {
+                word
+                for word, freq in word_freq.items() if freq < k_for_smoothing
+            }
+            modified_train_sentences = modify_training_data(
+                train_sentences, rare_words)
+
             # Estimate emission parameters
-            tag_count, word_tag_count = estimate_emission_params(modified_train_sentences)
-            
+            tag_count, word_tag_count = estimate_emission_params(
+                modified_train_sentences)
+
             # Read development data
             dev_sentences = read_unlabeled_data('EN/dev.in')
-            
+
             # Predict tags for development set
             predictions = []
-            vocabulary = {word for sentence in modified_train_sentences for word, _ in sentence}
-            
+            vocabulary = {
+                word
+                for sentence in modified_train_sentences
+                for word, _ in sentence
+            }
+
             for sentence in dev_sentences:
-                sentence_preds = [predict_baseline(word, vocabulary, tag_count, word_tag_count)
-                                  for word in sentence]
+                sentence_preds = [
+                    predict_baseline(word, vocabulary, tag_count,
+                                     word_tag_count) for word in sentence
+                ]
                 predictions.append(sentence_preds)
-            
+
             # Write predictions to file named with k
             output_filename = f'EN/dev.p1.k{k_for_smoothing}.out'
             write_output(output_filename, dev_sentences, predictions)
-            
+
             # Evaluate the output
             try:
                 precision, recall, f1 = evaluate('EN/dev.out', output_filename)
-                print(f"Results for k={k_for_smoothing}: Precision={precision:.4f}, Recall={recall:.4f}, F1={f1:.4f}")
+                print(
+                    f"Results for k={k_for_smoothing}: Precision={precision:.4f}, Recall={recall:.4f}, F1={f1:.4f}"
+                )
             except Exception as e:
                 print(f"Could not evaluate for k={k_for_smoothing}: {e}")
 
     elif args.part == 2:
         print("Running Viterbi algorithm...")
         predictions = []
+        predictions = []
         for sentence in dev_sentences:
-            sentence_preds = viterbi_decode(sentence, vocabulary, all_tags,
-                                            transition_count, transition_tag_count,
-                                            word_tag_count)
+            sentence_preds = viterbi_decode(sentence,
+                                            vocabulary,
+                                            all_tags,
+                                            transition_count,
+                                            transition_tag_count,
+                                            word_tag_count,
+                                            smoothing_k=0.01,
+                                            num_tags=len(all_tags))
+
             predictions.append(sentence_preds)
         write_output('EN/dev.p2.out', dev_sentences, predictions)
         print("Viterbi predictions written to EN/dev.p2.out")
@@ -793,9 +868,13 @@ def main():
         print("Finding 4th-best sequences...")
         predictions = []
         for sentence in dev_sentences:
-            sentence_preds = k_best_viterbi(sentence, vocabulary, all_tags,
-                                            transition_count, transition_tag_count,
-                                            word_tag_count, k=3)
+            sentence_preds = k_best_viterbi(sentence,
+                                            vocabulary,
+                                            all_tags,
+                                            transition_count,
+                                            transition_tag_count,
+                                            word_tag_count,
+                                            k=3)
             predictions.append(sentence_preds)
         write_output('EN/dev.p3.out', dev_sentences, predictions)
         print("4th-best predictions written to EN/dev.p3.out")
@@ -803,13 +882,24 @@ def main():
     elif args.part == 4:
         print("Running enhanced system...")
         perceptron = EnhancedPerceptron(all_tags, vocabulary)
-        perceptron.train(train_sentences, num_iterations=5,
-                         learning_rate=1.0, decay_rate=0.8)
+        perceptron.train(train_sentences,
+                         num_iterations=5,
+                         learning_rate=1.0,
+                         decay_rate=0.8)
 
         if args.test:
             try:
                 print("Reading test data...")
-                test_sentences = read_unlabeled_data('EN/test.in')
+                import os
+                # Check if EN/testFinal.in exists
+                if os.path.exists('EN/testFinal.in'):
+                    print(
+                        "Found EN/testFinal.in, using it for final test prediction."
+                    )
+                    test_sentences = read_unlabeled_data('EN/testFinal.in')
+                else:
+                    test_sentences = read_unlabeled_data('EN/test.in')
+
                 predictions = []
                 for sentence in test_sentences:
                     pred_tags = perceptron.viterbi_decode(sentence)
@@ -818,6 +908,7 @@ def main():
                 print("Enhanced predictions written to EN/test.p4.out")
             except FileNotFoundError:
                 print("Test file not found.")
+
         else:
             predictions = []
             for sentence in dev_sentences:
